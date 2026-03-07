@@ -1,11 +1,7 @@
 /**
  * Harry Potter 16-bit RPG
- * Expo React Native top-down dungeon crawler
- *
- * Controls:
- *   D-Pad  → move / melee attack (bumping into enemy)
- *   Spell buttons → select spell
- *   CAST button → fire spell in facing direction
+ * Dragon Quest-style top-down overworld visuals
+ * Real-time sprite animation, world tiles, visible characters
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -18,33 +14,36 @@ import {
   SafeAreaView,
 } from 'react-native';
 
-// ─── Screen dimensions & tile size ───────────────────────────────────────────
 const { width: SW, height: SH } = Dimensions.get('window');
-const TS = 32; // tile size in px
-const VP_W = Math.floor(SW / TS);          // viewport columns
-const VP_H = Math.floor((SH - 250) / TS); // viewport rows (leave room for HUD)
+const TS = 32;
+const VP_W = Math.floor(SW / TS);
+const VP_H = Math.floor((SH - 250) / TS);
 const MAP_W = 36;
 const MAP_H = 24;
 
-// ─── Tile types ───────────────────────────────────────────────────────────────
-const T = { W: 0, F: 1, S: 2 }; // Wall · Floor · Stairs
+const T = { W: 0, F: 1, S: 2, PATH: 3 };
 
-// ─── Enemy definitions ────────────────────────────────────────────────────────
 const ENEMY_STATS = {
-  spider:      { hp: 20,  dmg: 5,  delay: 18, xp: 10,  icon: '🕷️', color: '#8B4513' },
-  dementor:    { hp: 45,  dmg: 12, delay: 13, xp: 25,  icon: '👻', color: '#5555bb' },
-  death_eater: { hp: 70,  dmg: 18, delay: 10, xp: 50,  icon: '🧙', color: '#cc2020' },
-  voldemort:   { hp: 180, dmg: 28, delay: 7,  xp: 300, icon: '🐍', color: '#20cc55' },
+  spider:      { hp: 20,  dmg: 5,  delay: 18, xp: 10,  color: '#8B4513' },
+  dementor:    { hp: 45,  dmg: 12, delay: 13, xp: 25,  color: '#5555bb' },
+  death_eater: { hp: 70,  dmg: 18, delay: 10, xp: 50,  color: '#cc2020' },
+  voldemort:   { hp: 180, dmg: 28, delay: 7,  xp: 300, color: '#20cc55' },
 };
 
-// ─── Spells ───────────────────────────────────────────────────────────────────
 const SPELL_LIST = [
   { id: 'exp', label: 'Expello',  cost: 12, dmg: 28,  color: '#FF8C00' },
   { id: 'stu', label: 'Stupefy',  cost: 22, dmg: 45,  color: '#1E90FF' },
   { id: 'ava', label: 'Avada K!', cost: 48, dmg: 110, color: '#00FF44' },
 ];
 
-// ─── Level generator (BSP-style rooms + corridors) ───────────────────────────
+// Deterministic pseudo-random based on tile position
+function tr(x, y, s = 0) {
+  let h = (x * 374761393 + y * 668265263 + s * 2246822519) >>> 0;
+  h ^= h >> 13; h = (h * 1274126177) >>> 0; h ^= h >> 16;
+  return (h >>> 0) / 0xffffffff;
+}
+
+// ─── Level generator ──────────────────────────────────────────────────────────
 function genLevel(lvl) {
   const grid = Array.from({ length: MAP_H }, () => Array(MAP_W).fill(T.W));
   const rooms = [];
@@ -54,7 +53,6 @@ function genLevel(lvl) {
     const h = 3 + Math.floor(Math.random() * 4);
     const x = 1 + Math.floor(Math.random() * (MAP_W - w - 2));
     const y = 1 + Math.floor(Math.random() * (MAP_H - h - 2));
-    // Reject overlapping rooms (with 1-tile buffer)
     if (rooms.some(r => x < r.x + r.w + 1 && x + w + 1 > r.x && y < r.y + r.h + 1 && y + h + 1 > r.y)) continue;
     rooms.push({ x, y, w, h });
     for (let ry = y; ry < y + h; ry++)
@@ -62,7 +60,6 @@ function genLevel(lvl) {
         grid[ry][rx] = T.F;
   }
 
-  // Fallback: open map if room generation failed
   if (rooms.length < 2) {
     for (let ry = 1; ry < MAP_H - 1; ry++)
       for (let rx = 1; rx < MAP_W - 1; rx++)
@@ -73,26 +70,29 @@ function genLevel(lvl) {
     );
   }
 
-  // Connect rooms with L-shaped corridors
+  // Connect rooms — mark corridors as PATH
   for (let i = 1; i < rooms.length; i++) {
     const a = rooms[i - 1], b = rooms[i];
     let cx = a.x + Math.floor(a.w / 2), cy = a.y + Math.floor(a.h / 2);
     const tx = b.x + Math.floor(b.w / 2), ty = b.y + Math.floor(b.h / 2);
-    while (cx !== tx) { grid[cy][cx] = T.F; cx += cx < tx ? 1 : -1; }
-    while (cy !== ty) { grid[cy][cx] = T.F; cy += cy < ty ? 1 : -1; }
+    while (cx !== tx) {
+      if (grid[cy][cx] === T.W) grid[cy][cx] = T.PATH;
+      cx += cx < tx ? 1 : -1;
+    }
+    while (cy !== ty) {
+      if (grid[cy][cx] === T.W) grid[cy][cx] = T.PATH;
+      cy += cy < ty ? 1 : -1;
+    }
   }
 
-  // Place stairs in last room
   const lr = rooms[rooms.length - 1];
   grid[lr.y + Math.floor(lr.h / 2)][lr.x + Math.floor(lr.w / 2)] = T.S;
 
-  // Populate enemies and items
   const enemies = [];
   const items = [];
 
   rooms.forEach((r, i) => {
-    if (i === 0) return; // starting room is safe
-
+    if (i === 0) return;
     const isBossRoom = i === rooms.length - 1 && lvl >= 2;
 
     if (isBossRoom) {
@@ -140,12 +140,294 @@ function genLevel(lvl) {
   };
 }
 
+// ─── Tile Background ──────────────────────────────────────────────────────────
+const TileBg = React.memo(function TileBg({ tile, mx, my }) {
+  const r1 = tr(mx, my, 1);
+  const r2 = tr(mx, my, 2);
+  const r3 = tr(mx, my, 3);
+
+  if (tile === T.W) {
+    // 55% trees, 45% stone wall — gives Dragon Quest forest feel
+    if (r1 > 0.45) {
+      const canopy = r2 > 0.5 ? '#2d6e1a' : '#246018';
+      const canopy2 = r2 > 0.5 ? '#358020' : '#2a7020';
+      return (
+        <View style={{ width: TS, height: TS, backgroundColor: '#152a0a' }}>
+          {/* Main canopy */}
+          <View style={{ position: 'absolute', left: 4, top: 0, width: 24, height: 20, backgroundColor: canopy, borderRadius: 12 }} />
+          {/* Highlight on canopy */}
+          <View style={{ position: 'absolute', left: 8, top: 2, width: 14, height: 10, backgroundColor: canopy2, borderRadius: 8 }} />
+          {/* Lower canopy layer */}
+          <View style={{ position: 'absolute', left: 2, top: 14, width: 28, height: 12, backgroundColor: canopy, borderRadius: 8 }} />
+          {/* Trunk */}
+          <View style={{ position: 'absolute', left: 12, top: 24, width: 8, height: 8, backgroundColor: '#5a3010' }} />
+        </View>
+      );
+    } else {
+      // Stone wall — Hogwarts castle bricks
+      const b1 = r2 > 0.6 ? '#3c3c50' : '#343448';
+      const b2 = r2 > 0.3 ? '#38384a' : '#303042';
+      return (
+        <View style={{ width: TS, height: TS, backgroundColor: '#1c1c2a' }}>
+          <View style={{ position: 'absolute', left: 0, top: 0, width: 18, height: 10, backgroundColor: b1, borderWidth: 0.5, borderColor: '#12121e' }} />
+          <View style={{ position: 'absolute', left: 19, top: 0, width: 13, height: 10, backgroundColor: b2, borderWidth: 0.5, borderColor: '#12121e' }} />
+          <View style={{ position: 'absolute', left: 0, top: 11, width: 10, height: 10, backgroundColor: b2, borderWidth: 0.5, borderColor: '#12121e' }} />
+          <View style={{ position: 'absolute', left: 11, top: 11, width: 21, height: 10, backgroundColor: b1, borderWidth: 0.5, borderColor: '#12121e' }} />
+          <View style={{ position: 'absolute', left: 0, top: 22, width: 14, height: 10, backgroundColor: b1, borderWidth: 0.5, borderColor: '#12121e' }} />
+          <View style={{ position: 'absolute', left: 15, top: 22, width: 17, height: 10, backgroundColor: b2, borderWidth: 0.5, borderColor: '#12121e' }} />
+        </View>
+      );
+    }
+  }
+
+  if (tile === T.PATH) {
+    const c = r1 > 0.65 ? '#7e6e4c' : r1 > 0.35 ? '#706040' : '#645838';
+    return (
+      <View style={{ width: TS, height: TS, backgroundColor: c }}>
+        {r1 > 0.55 && <View style={{ position: 'absolute', left: Math.floor(r2 * 22) + 2, top: Math.floor(r3 * 22) + 2, width: 3, height: 2, backgroundColor: '#4e3c20' }} />}
+        {r2 > 0.6 && <View style={{ position: 'absolute', left: Math.floor(r3 * 20) + 4, top: Math.floor(r1 * 20) + 6, width: 2, height: 3, backgroundColor: '#564428' }} />}
+      </View>
+    );
+  }
+
+  if (tile === T.S) {
+    return (
+      <View style={{ width: TS, height: TS, backgroundColor: '#5a4e30' }}>
+        <View style={{ position: 'absolute', left: 1, top: 24, width: 30, height: 6, backgroundColor: '#9a8a60' }} />
+        <View style={{ position: 'absolute', left: 4, top: 17, width: 24, height: 7, backgroundColor: '#8a7a54' }} />
+        <View style={{ position: 'absolute', left: 7, top: 11, width: 18, height: 6, backgroundColor: '#7a6a48' }} />
+        <View style={{ position: 'absolute', left: 10, top: 6, width: 12, height: 5, backgroundColor: '#6a5a3c' }} />
+        {/* Glow indicator */}
+        <View style={{ position: 'absolute', left: 13, top: 1, width: 6, height: 4, backgroundColor: '#ffd700', borderRadius: 3 }} />
+      </View>
+    );
+  }
+
+  // T.F — Hogwarts stone floor
+  const fc = r1 > 0.75 ? '#787060' : r1 > 0.45 ? '#6e6658' : '#646050';
+  return (
+    <View style={{ width: TS, height: TS, backgroundColor: fc }}>
+      <View style={{ position: 'absolute', right: 0, top: 0, width: 0.5, height: TS, backgroundColor: 'rgba(30,25,15,0.5)' }} />
+      <View style={{ position: 'absolute', left: 0, bottom: 0, width: TS, height: 0.5, backgroundColor: 'rgba(30,25,15,0.5)' }} />
+      {r1 > 0.85 && <View style={{ position: 'absolute', left: Math.floor(r2 * 20) + 4, top: Math.floor(r3 * 20) + 4, width: 4, height: 2, backgroundColor: 'rgba(80,70,40,0.4)' }} />}
+    </View>
+  );
+});
+
+// ─── Harry Potter Sprite ──────────────────────────────────────────────────────
+function HarrySprite({ facingX, frame }) {
+  const flip = facingX < 0;
+  const leg = frame ? 3 : -3;
+  return (
+    <View style={{ width: 24, height: 30, transform: [{ scaleX: flip ? -1 : 1 }] }}>
+      {/* Legs */}
+      <View style={{ position: 'absolute', left: 5, top: 23 + leg, width: 5, height: 7, backgroundColor: '#0a0a18' }} />
+      <View style={{ position: 'absolute', left: 14, top: 23 - leg, width: 5, height: 7, backgroundColor: '#0a0a18' }} />
+      {/* Body — Gryffindor robes */}
+      <View style={{ position: 'absolute', left: 4, top: 13, width: 16, height: 12, backgroundColor: '#7a0000' }} />
+      {/* Scarf — red & gold stripes */}
+      <View style={{ position: 'absolute', left: 3, top: 17, width: 18, height: 2, backgroundColor: '#cc2200' }} />
+      <View style={{ position: 'absolute', left: 3, top: 19, width: 18, height: 2, backgroundColor: '#ffd700' }} />
+      {/* Arms */}
+      <View style={{ position: 'absolute', left: 1, top: 14, width: 4, height: 10, backgroundColor: '#5a0000' }} />
+      <View style={{ position: 'absolute', left: 19, top: 14, width: 4, height: 10, backgroundColor: '#5a0000' }} />
+      {/* Wand */}
+      <View style={{ position: 'absolute', left: 21, top: 20, width: 2, height: 8, backgroundColor: '#c09050' }} />
+      {/* Wand tip glow */}
+      <View style={{ position: 'absolute', left: 20, top: 27, width: 4, height: 2, backgroundColor: '#ffe080', borderRadius: 2 }} />
+      {/* Head */}
+      <View style={{ position: 'absolute', left: 7, top: 4, width: 10, height: 10, backgroundColor: '#f0bc7a', borderRadius: 5 }} />
+      {/* Messy black hair */}
+      <View style={{ position: 'absolute', left: 7, top: 4, width: 10, height: 5, backgroundColor: '#180e04', borderRadius: 5 }} />
+      <View style={{ position: 'absolute', left: 7, top: 6, width: 4, height: 3, backgroundColor: '#180e04' }} />
+      <View style={{ position: 'absolute', left: 16, top: 6, width: 2, height: 2, backgroundColor: '#180e04' }} />
+      {/* Glasses */}
+      <View style={{ position: 'absolute', left: 8, top: 9, width: 4, height: 3, backgroundColor: 'rgba(150,180,255,0.15)', borderWidth: 1, borderColor: '#444', borderRadius: 1 }} />
+      <View style={{ position: 'absolute', left: 13, top: 9, width: 4, height: 3, backgroundColor: 'rgba(150,180,255,0.15)', borderWidth: 1, borderColor: '#444', borderRadius: 1 }} />
+      {/* Lightning scar */}
+      <View style={{ position: 'absolute', left: 12, top: 5, width: 1, height: 2, backgroundColor: '#e05020' }} />
+      <View style={{ position: 'absolute', left: 13, top: 7, width: 1, height: 2, backgroundColor: '#e05020' }} />
+    </View>
+  );
+}
+
+// ─── Spider Sprite ────────────────────────────────────────────────────────────
+function SpiderSprite({ frame }) {
+  const ls = frame ? 2 : -2;
+  return (
+    <View style={{ width: 28, height: 22 }}>
+      {/* Left legs */}
+      <View style={{ position: 'absolute', left: 0, top: 4 + ls, width: 8, height: 2, backgroundColor: '#2a1808', transform: [{ rotate: '-20deg' }] }} />
+      <View style={{ position: 'absolute', left: 0, top: 8, width: 8, height: 2, backgroundColor: '#2a1808' }} />
+      <View style={{ position: 'absolute', left: 0, top: 12 - ls, width: 8, height: 2, backgroundColor: '#2a1808', transform: [{ rotate: '20deg' }] }} />
+      <View style={{ position: 'absolute', left: 0, top: 16 - ls, width: 7, height: 2, backgroundColor: '#2a1808', transform: [{ rotate: '35deg' }] }} />
+      {/* Right legs */}
+      <View style={{ position: 'absolute', left: 20, top: 4 + ls, width: 8, height: 2, backgroundColor: '#2a1808', transform: [{ rotate: '20deg' }] }} />
+      <View style={{ position: 'absolute', left: 20, top: 8, width: 8, height: 2, backgroundColor: '#2a1808' }} />
+      <View style={{ position: 'absolute', left: 20, top: 12 - ls, width: 8, height: 2, backgroundColor: '#2a1808', transform: [{ rotate: '-20deg' }] }} />
+      <View style={{ position: 'absolute', left: 21, top: 16 - ls, width: 7, height: 2, backgroundColor: '#2a1808', transform: [{ rotate: '-35deg' }] }} />
+      {/* Abdomen */}
+      <View style={{ position: 'absolute', left: 7, top: 5, width: 14, height: 12, backgroundColor: '#5c2c10', borderRadius: 7 }} />
+      {/* Head */}
+      <View style={{ position: 'absolute', left: 9, top: 13, width: 10, height: 8, backgroundColor: '#4a2010', borderRadius: 4 }} />
+      {/* Eyes */}
+      <View style={{ position: 'absolute', left: 10, top: 15, width: 3, height: 3, backgroundColor: '#ff1a1a', borderRadius: 2 }} />
+      <View style={{ position: 'absolute', left: 15, top: 15, width: 3, height: 3, backgroundColor: '#ff1a1a', borderRadius: 2 }} />
+      {/* Fangs */}
+      <View style={{ position: 'absolute', left: 11, top: 20, width: 2, height: 3, backgroundColor: '#e0d0a0' }} />
+      <View style={{ position: 'absolute', left: 15, top: 20, width: 2, height: 3, backgroundColor: '#e0d0a0' }} />
+    </View>
+  );
+}
+
+// ─── Dementor Sprite ──────────────────────────────────────────────────────────
+function DementorSprite({ frame }) {
+  const bob = frame ? 0 : 2;
+  return (
+    <View style={{ width: 24, height: 30, marginTop: bob }}>
+      {/* Tattered robe bottom */}
+      {[0, 5, 10, 15, 20].map(x => (
+        <View key={x} style={{ position: 'absolute', left: x + 2, top: 24, width: 4, height: x % 10 === 0 ? 7 : 5, backgroundColor: '#100820' }} />
+      ))}
+      {/* Main cloak */}
+      <View style={{ position: 'absolute', left: 2, top: 8, width: 20, height: 18, backgroundColor: '#180c28' }} />
+      {/* Hood */}
+      <View style={{ position: 'absolute', left: 4, top: 1, width: 16, height: 10, backgroundColor: '#100820', borderRadius: 8 }} />
+      {/* Hollow face — pale */}
+      <View style={{ position: 'absolute', left: 7, top: 5, width: 10, height: 8, backgroundColor: '#b8a8c4', borderRadius: 4 }} />
+      {/* Empty eye sockets */}
+      <View style={{ position: 'absolute', left: 8, top: 7, width: 3, height: 3, backgroundColor: '#6600bb', borderRadius: 1 }} />
+      <View style={{ position: 'absolute', left: 13, top: 7, width: 3, height: 3, backgroundColor: '#6600bb', borderRadius: 1 }} />
+      {/* Inner glow */}
+      <View style={{ position: 'absolute', left: 9, top: 8, width: 1, height: 1, backgroundColor: '#cc44ff' }} />
+      <View style={{ position: 'absolute', left: 14, top: 8, width: 1, height: 1, backgroundColor: '#cc44ff' }} />
+      {/* Gaping mouth */}
+      <View style={{ position: 'absolute', left: 9, top: 11, width: 6, height: 3, backgroundColor: '#1a0828', borderRadius: 1 }} />
+      {/* Cloak arms */}
+      <View style={{ position: 'absolute', left: 0, top: 10, width: 4, height: 12, backgroundColor: '#180c28', borderRadius: 2 }} />
+      <View style={{ position: 'absolute', left: 20, top: 10, width: 4, height: 12, backgroundColor: '#180c28', borderRadius: 2 }} />
+      {/* Soul-sucking aura */}
+      <View style={{ position: 'absolute', left: 1, top: 6, width: 22, height: 18, backgroundColor: 'rgba(100,0,180,0.08)', borderRadius: 11 }} />
+    </View>
+  );
+}
+
+// ─── Death Eater Sprite ───────────────────────────────────────────────────────
+function DeathEaterSprite({ frame }) {
+  const leg = frame ? 3 : -3;
+  return (
+    <View style={{ width: 24, height: 30 }}>
+      {/* Legs */}
+      <View style={{ position: 'absolute', left: 5, top: 23 + leg, width: 5, height: 7, backgroundColor: '#080810' }} />
+      <View style={{ position: 'absolute', left: 14, top: 23 - leg, width: 5, height: 7, backgroundColor: '#080810' }} />
+      {/* Dark robes */}
+      <View style={{ position: 'absolute', left: 4, top: 13, width: 16, height: 12, backgroundColor: '#080814' }} />
+      {/* Dark Mark tattoo on arm (green snake) */}
+      <View style={{ position: 'absolute', left: 0, top: 15, width: 5, height: 9, backgroundColor: '#0c0c18' }} />
+      <View style={{ position: 'absolute', left: 1, top: 18, width: 3, height: 3, backgroundColor: '#005500' }} />
+      <View style={{ position: 'absolute', left: 19, top: 15, width: 5, height: 9, backgroundColor: '#0c0c18' }} />
+      {/* Wand */}
+      <View style={{ position: 'absolute', left: 22, top: 21, width: 2, height: 8, backgroundColor: '#3a2008' }} />
+      <View style={{ position: 'absolute', left: 21, top: 28, width: 4, height: 2, backgroundColor: '#cc0000', borderRadius: 2 }} />
+      {/* Shoulders / cape */}
+      <View style={{ position: 'absolute', left: 1, top: 13, width: 22, height: 5, backgroundColor: '#0c0c1c' }} />
+      {/* Hood */}
+      <View style={{ position: 'absolute', left: 5, top: 0, width: 14, height: 8, backgroundColor: '#0c0c1c', borderRadius: 7 }} />
+      {/* Mask — white */}
+      <View style={{ position: 'absolute', left: 7, top: 3, width: 10, height: 12, backgroundColor: '#e0d8c8', borderRadius: 4, borderWidth: 1, borderColor: '#888' }} />
+      {/* Mask eye holes */}
+      <View style={{ position: 'absolute', left: 8, top: 7, width: 3, height: 3, backgroundColor: '#080808', borderRadius: 1 }} />
+      <View style={{ position: 'absolute', left: 13, top: 7, width: 3, height: 3, backgroundColor: '#080808', borderRadius: 1 }} />
+      {/* Mask snake symbol */}
+      <View style={{ position: 'absolute', left: 11, top: 12, width: 2, height: 2, backgroundColor: '#008800' }} />
+    </View>
+  );
+}
+
+// ─── Voldemort Sprite ─────────────────────────────────────────────────────────
+function VoldemortSprite({ frame }) {
+  const bob = frame ? 0 : 1;
+  return (
+    <View style={{ width: 28, height: 34, marginTop: bob }}>
+      {/* Legs */}
+      <View style={{ position: 'absolute', left: 7, top: 28, width: 6, height: 6, backgroundColor: '#0a140a' }} />
+      <View style={{ position: 'absolute', left: 15, top: 28, width: 6, height: 6, backgroundColor: '#0a140a' }} />
+      {/* Long dark robes */}
+      <View style={{ position: 'absolute', left: 5, top: 14, width: 18, height: 16, backgroundColor: '#0a140a' }} />
+      {/* Snake-like arms */}
+      <View style={{ position: 'absolute', left: 1, top: 15, width: 5, height: 12, backgroundColor: '#0e1a0e', borderRadius: 3 }} />
+      <View style={{ position: 'absolute', left: 22, top: 15, width: 5, height: 12, backgroundColor: '#0e1a0e', borderRadius: 3 }} />
+      {/* Elder Wand — white bone */}
+      <View style={{ position: 'absolute', left: 25, top: 22, width: 2, height: 10, backgroundColor: '#d8d0e8' }} />
+      <View style={{ position: 'absolute', left: 24, top: 21, width: 4, height: 2, backgroundColor: '#e8e0f8' }} />
+      {/* Chest — dark robe with silver clasp */}
+      <View style={{ position: 'absolute', left: 12, top: 16, width: 4, height: 4, backgroundColor: '#8080a0' }} />
+      {/* Neck */}
+      <View style={{ position: 'absolute', left: 11, top: 10, width: 6, height: 5, backgroundColor: '#cce0cc' }} />
+      {/* Head — large, pale green-white, snake-like */}
+      <View style={{ position: 'absolute', left: 6, top: 1, width: 16, height: 14, backgroundColor: '#cce0cc', borderRadius: 6 }} />
+      {/* Pale sheen */}
+      <View style={{ position: 'absolute', left: 8, top: 2, width: 10, height: 6, backgroundColor: '#ddf0dd', borderRadius: 4 }} />
+      {/* Nose slits — no nose */}
+      <View style={{ position: 'absolute', left: 12, top: 9, width: 2, height: 3, backgroundColor: '#aaccaa', borderRadius: 1 }} />
+      <View style={{ position: 'absolute', left: 15, top: 9, width: 2, height: 3, backgroundColor: '#aaccaa', borderRadius: 1 }} />
+      {/* Red serpent eyes */}
+      <View style={{ position: 'absolute', left: 8, top: 5, width: 4, height: 4, backgroundColor: '#cc0000', borderRadius: 2 }} />
+      <View style={{ position: 'absolute', left: 17, top: 5, width: 4, height: 4, backgroundColor: '#cc0000', borderRadius: 2 }} />
+      {/* Slit pupils */}
+      <View style={{ position: 'absolute', left: 9, top: 5, width: 2, height: 4, backgroundColor: '#1a0000' }} />
+      <View style={{ position: 'absolute', left: 18, top: 5, width: 2, height: 4, backgroundColor: '#1a0000' }} />
+      {/* Thin evil smile */}
+      <View style={{ position: 'absolute', left: 10, top: 13, width: 8, height: 1, backgroundColor: '#88aaaa' }} />
+      {/* Dark aura */}
+      <View style={{ position: 'absolute', left: 0, top: 0, width: 28, height: 34, backgroundColor: 'rgba(0,60,0,0.06)', borderRadius: 14 }} />
+    </View>
+  );
+}
+
+// ─── Item Sprites ─────────────────────────────────────────────────────────────
+function HpPotionSprite() {
+  return (
+    <View style={{ width: 16, height: 22 }}>
+      <View style={{ position: 'absolute', left: 5, top: 0, width: 6, height: 4, backgroundColor: '#7a5020' }} />
+      <View style={{ position: 'absolute', left: 6, top: 3, width: 4, height: 5, backgroundColor: '#cc1111' }} />
+      <View style={{ position: 'absolute', left: 2, top: 7, width: 12, height: 13, backgroundColor: '#cc0000', borderRadius: 4 }} />
+      <View style={{ position: 'absolute', left: 4, top: 8, width: 5, height: 5, backgroundColor: '#ff6666', borderRadius: 3 }} />
+      <View style={{ position: 'absolute', left: 3, top: 13, width: 10, height: 4, backgroundColor: '#ffffff18' }} />
+    </View>
+  );
+}
+
+function MpPotionSprite() {
+  return (
+    <View style={{ width: 16, height: 22 }}>
+      <View style={{ position: 'absolute', left: 5, top: 0, width: 6, height: 4, backgroundColor: '#7a5020' }} />
+      <View style={{ position: 'absolute', left: 6, top: 3, width: 4, height: 5, backgroundColor: '#2244cc' }} />
+      <View style={{ position: 'absolute', left: 2, top: 7, width: 12, height: 13, backgroundColor: '#1133cc', borderRadius: 4 }} />
+      <View style={{ position: 'absolute', left: 4, top: 8, width: 5, height: 5, backgroundColor: '#5577ff', borderRadius: 3 }} />
+      <View style={{ position: 'absolute', left: 3, top: 12, width: 4, height: 2, backgroundColor: '#ffffff30' }} />
+      <View style={{ position: 'absolute', left: 8, top: 14, width: 3, height: 2, backgroundColor: '#ffffff30' }} />
+    </View>
+  );
+}
+
+// ─── Enemy HP bar ─────────────────────────────────────────────────────────────
+function EnemyHpBar({ hp, maxHp, isVoldemort }) {
+  const pct = Math.max(0, hp / maxHp);
+  const barColor = isVoldemort ? '#20cc55' : pct > 0.5 ? '#44cc44' : pct > 0.25 ? '#cccc22' : '#cc2222';
+  return (
+    <View style={{ position: 'absolute', top: -5, left: 1, width: TS - 2, height: 3, backgroundColor: '#1a0808', borderRadius: 1 }}>
+      <View style={{ width: `${pct * 100}%`, height: 3, backgroundColor: barColor, borderRadius: 1 }} />
+    </View>
+  );
+}
+
 // ─── Title Screen ─────────────────────────────────────────────────────────────
 function TitleScreen({ onStart }) {
   return (
     <View style={s.center}>
       <Text style={s.titleBig}>⚡ HARRY POTTER ⚡</Text>
-      <Text style={s.titleSub}>16-BIT RPG QUEST</Text>
+      <Text style={s.titleSub}>HOGWARTS RPG QUEST</Text>
       <View style={s.divider} />
       <Text style={s.titleDesc}>
         Hogwarts is under attack!{'\n'}
@@ -187,16 +469,16 @@ function EndScreen({ win, score, onReplay }) {
 
 // ─── Game Screen ──────────────────────────────────────────────────────────────
 function GameScreen({ onEnd }) {
-  // All mutable game state lives in a ref to avoid stale closures in the game loop
   const gsRef = useRef(null);
   const [, forceRender] = useState(0);
   const rerender = useCallback(() => forceRender(n => n + 1), []);
 
-  // selectedSpell must be accessible from the game loop ref too
   const [selectedSpell, setSelectedSpell] = useState(0);
   const spellRef = useRef(0);
 
-  // Keep onEnd stable inside the loop
+  // Animation frame: 0 or 1, cycles at ~300ms
+  const [animFrame, setAnimFrame] = useState(0);
+
   const onEndRef = useRef(onEnd);
   useEffect(() => { onEndRef.current = onEnd; }, [onEnd]);
 
@@ -213,12 +495,18 @@ function GameScreen({ onEnd }) {
         facingX: 1, facingY: 0,
       },
       ld,
-      msgs: [`⚡ Hogwarts Floor ${lvl}/3 — find the stairs 🪜`],
+      msgs: [`⚡ Hogwarts Floor ${lvl}/3 — find the stairs`],
     };
     rerender();
   }, [rerender]);
 
   useEffect(() => { initLevel(1, 0); }, [initLevel]);
+
+  // ── Animation ticker ───────────────────────────────────────────────────────
+  useEffect(() => {
+    const id = setInterval(() => setAnimFrame(f => f ^ 1), 300);
+    return () => clearInterval(id);
+  }, []);
 
   // ── Game loop (enemy AI) ───────────────────────────────────────────────────
   useEffect(() => {
@@ -236,17 +524,15 @@ function GameScreen({ onEnd }) {
         ne.timer = 0;
 
         const md = Math.abs(ne.x - p.x) + Math.abs(ne.y - p.y);
-        if (md > 12) return ne; // too far, dormant
+        if (md > 12) return ne;
 
         if (md === 1) {
-          // adjacent → attack player
           dmgTaken += ne.dmg;
-          const name = ne.type === 'voldemort' ? '🐍 Voldemort' : ne.type;
+          const name = ne.type === 'voldemort' ? 'Voldemort' : ne.type;
           loopMsgs.push(`💥 ${name} attacks! -${ne.dmg}HP`);
           return ne;
         }
 
-        // move one step toward player
         const dx = p.x - ne.x, dy = p.y - ne.y;
         let nx = ne.x, ny = ne.y;
         if (Math.abs(dx) >= Math.abs(dy)) nx += dx > 0 ? 1 : -1;
@@ -283,7 +569,6 @@ function GameScreen({ onEnd }) {
     if (nx < 0 || nx >= MAP_W || ny < 0 || ny >= MAP_H) return;
     if (ld.grid[ny][nx] === T.W) return;
 
-    // Bump into enemy → melee attack
     const eIdx = ld.enemies.findIndex(e => e.x === nx && e.y === ny);
     if (eIdx !== -1) {
       const e = ld.enemies[eIdx];
@@ -312,19 +597,16 @@ function GameScreen({ onEnd }) {
       return;
     }
 
-    // Move player
     let newPlayer = { ...p, x: nx, y: ny, facingX: dx, facingY: dy };
     let newItems = ld.items;
     const msgs = [...gs.msgs];
 
-    // Stairs
     if (ld.grid[ny][nx] === T.S) {
       if (lvl >= 3) { onEndRef.current({ win: true, score: p.score }); return; }
       initLevel(lvl + 1, p.score);
       return;
     }
 
-    // Pick up item
     const iIdx = ld.items.findIndex(it => it.x === nx && it.y === ny);
     if (iIdx !== -1) {
       const item = ld.items[iIdx];
@@ -361,7 +643,6 @@ function GameScreen({ onEnd }) {
       return;
     }
 
-    // Ray cast in facing direction (up to 8 tiles)
     const fdx = p.facingX || 1, fdy = p.facingY || 0;
     let hit = null;
     for (let i = 1; i <= 8; i++) {
@@ -419,48 +700,65 @@ function GameScreen({ onEnd }) {
   const hpCol = hpPct > 0.5 ? '#44cc44' : hpPct > 0.25 ? '#cccc44' : '#cc4444';
   const curSpell = SPELL_LIST[selectedSpell];
 
-  // Build tile views
+  // Build tile + entity views
   const tileViews = [];
   for (let row = 0; row < VP_H; row++) {
     for (let col = 0; col < VP_W; col++) {
       const mx = col + camX, my = row + camY;
       if (mx < 0 || mx >= MAP_W || my < 0 || my >= MAP_H) continue;
       const tile = ld.grid[my][mx];
-      const isWall = tile === T.W;
 
-      let icon = null;
-      if (!isWall) {
-        if (tile === T.S) icon = '🪜';
-        if (mx === p.x && my === p.y) {
-          icon = '⚡';
-        } else {
-          const e = ld.enemies.find(e => e.x === mx && e.y === my);
-          if (e) {
-            icon = ENEMY_STATS[e.type].icon;
-          } else {
-            const it = ld.items.find(it => it.x === mx && it.y === my);
-            if (it) icon = it.type === 'hp_potion' ? '🧪' : '🔮';
-          }
-        }
-      }
+      const left = col * TS;
+      const top = row * TS;
 
+      // Tile background
       tileViews.push(
-        <View
-          key={`${col}-${row}`}
-          style={{
-            position: 'absolute',
-            left: col * TS, top: row * TS,
-            width: TS, height: TS,
-            backgroundColor: isWall ? '#0e0630' : '#130d07',
-            borderWidth: 0.5,
-            borderColor: isWall ? '#16093a' : '#1c1208',
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}
-        >
-          {icon ? <Text style={{ fontSize: 18 }}>{icon}</Text> : null}
+        <View key={`t-${col}-${row}`} style={{ position: 'absolute', left, top, width: TS, height: TS }}>
+          <TileBg tile={tile} mx={mx} my={my} />
         </View>
       );
+
+      if (tile === T.W) continue; // no entities on walls
+
+      // Player
+      if (mx === p.x && my === p.y) {
+        tileViews.push(
+          <View key={`p-${col}-${row}`} style={{ position: 'absolute', left: left + 4, top: top + 1, width: 24, height: 30 }}>
+            <HarrySprite facingX={p.facingX} frame={animFrame} />
+          </View>
+        );
+        continue;
+      }
+
+      // Enemy
+      const e = ld.enemies.find(e => e.x === mx && e.y === my);
+      if (e) {
+        let Sprite;
+        switch (e.type) {
+          case 'spider':      Sprite = <SpiderSprite frame={animFrame} />; break;
+          case 'dementor':    Sprite = <DementorSprite frame={animFrame} />; break;
+          case 'death_eater': Sprite = <DeathEaterSprite frame={animFrame} />; break;
+          case 'voldemort':   Sprite = <VoldemortSprite frame={animFrame} />; break;
+          default:            Sprite = null;
+        }
+        tileViews.push(
+          <View key={`e-${e.id}`} style={{ position: 'absolute', left: left + 2, top: top + 3, width: TS - 4, height: TS - 3 }}>
+            {Sprite}
+            <EnemyHpBar hp={e.hp} maxHp={e.maxHp} isVoldemort={e.type === 'voldemort'} />
+          </View>
+        );
+        continue;
+      }
+
+      // Item
+      const it = ld.items.find(it => it.x === mx && it.y === my);
+      if (it) {
+        tileViews.push(
+          <View key={`i-${it.id}`} style={{ position: 'absolute', left: left + 8, top: top + 5, width: 16, height: 22 }}>
+            {it.type === 'hp_potion' ? <HpPotionSprite /> : <MpPotionSprite />}
+          </View>
+        );
+      }
     }
   }
 
@@ -527,7 +825,7 @@ function GameScreen({ onEnd }) {
               <Text style={s.dTxt}>◀</Text>
             </TouchableOpacity>
             <View style={[s.dBtn, { backgroundColor: '#180830' }]}>
-              <Text style={{ fontSize: 16 }}>⚡</Text>
+              <Text style={{ fontSize: 10, color: '#ffd700', fontWeight: 'bold' }}>HP</Text>
             </View>
             <TouchableOpacity onPress={() => move(1, 0)} style={s.dBtn}>
               <Text style={s.dTxt}>▶</Text>
@@ -657,7 +955,6 @@ const s = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-  // HUD
   hud: {
     flexDirection: 'row',
     paddingHorizontal: 10,
@@ -673,7 +970,6 @@ const s = StyleSheet.create({
   hudScore: { color: '#aaa', fontSize: 9 },
   barBg: { height: 6, backgroundColor: '#1a0a2e', borderRadius: 3, overflow: 'hidden', minWidth: 60 },
   barFill: { height: 6, borderRadius: 3 },
-  // Messages
   msgBox: {
     backgroundColor: '#0a0618',
     paddingHorizontal: 8,
@@ -682,7 +978,6 @@ const s = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   msgText: { fontSize: 10, lineHeight: 16 },
-  // Controls
   controls: {
     flexDirection: 'row',
     backgroundColor: '#0d0820',
@@ -703,7 +998,6 @@ const s = StyleSheet.create({
     margin: 2,
   },
   dTxt: { color: '#d0c0a0', fontSize: 18, fontWeight: 'bold' },
-  // Spells
   spellBtn: {
     paddingHorizontal: 6,
     paddingVertical: 4,
