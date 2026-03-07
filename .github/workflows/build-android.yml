@@ -1,0 +1,67 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+env:
+  GODOT_VERSION: "4.2.2"
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout kodas
+        uses: actions/checkout@v4
+
+      - name: Java JDK 17 nustatymas
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Android SDK nustatymas
+        uses: android-actions/setup-android@v3
+
+      - name: Android įrankių įdiegimas
+        run: |
+          sdkmanager "build-tools;34.0.0" "platforms;android-34" --sdk_root=$ANDROID_SDK_ROOT
+
+      - name: Godot 4 parsisiuntimas
+        run: |
+          wget -q "https://github.com/godotengine/godot/releases/download/${{ env.GODOT_VERSION }}-stable/Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64.zip"
+          unzip -q "Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64.zip"
+          chmod +x "Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64"
+          sudo mv "Godot_v${{ env.GODOT_VERSION }}-stable_linux.x86_64" /usr/local/bin/godot
+
+      - name: Godot eksporto šablonų parsisiuntimas
+        run: |
+          mkdir -p ~/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable
+          wget -q "https://github.com/godotengine/godot/releases/download/${{ env.GODOT_VERSION }}-stable/Godot_v${{ env.GODOT_VERSION }}-stable_export_templates.tpz"
+          unzip -q "Godot_v${{ env.GODOT_VERSION }}-stable_export_templates.tpz"
+          mv templates/* ~/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable/
+
+      - name: Debug Keystore sukūrimas
+        run: |
+          keytool -genkey -v \
+            -keystore lotr-rpg/debug.keystore \
+            -alias androiddebugkey \
+            -keyalg RSA -keysize 2048 \
+            -validity 10000 \
+            -storepass android \
+            -keypass android \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: APK eksportavimas
+        run: |
+          mkdir -p builds
+          godot --headless --path lotr-rpg/ --export-release "Android" ../builds/ZieduValdovai.apk 2>&1
+
+      - name: APK įkėlimas kaip artefaktas
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZieduValdovai-Android-APK
+          path: builds/ZieduValdovai.apk
+          retention-days: 30
