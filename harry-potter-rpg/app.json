@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Harry Potter RPG",
+    "slug": "harry-potter-rpg",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#050510"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#050510"
+      },
+      "package": "com.harrypotter.rpg",
+      "versionCode": 1
+    },
+    "platforms": ["android", "ios"],
+    "sdkVersion": "51.0.0"
+  }
+}
