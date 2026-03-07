@@ -1,0 +1,37 @@
+[gd_scene load_steps=2 format=3 uid="uid://aragorn_scena"]
+
+[ext_resource type="Script" path="res://scripts/player/aragorn.gd" id="1_aragorn"]
+
+[node name="Aragorn" type="CharacterBody3D"]
+script = ExtResource("1_aragorn")
+
+[node name="KolizijosForma" type="CollisionShape3D" parent="."]
+shape = CapsuleShape3D
+
+[node name="ModelisHolderis" type="Node3D" parent="."]
+
+[node name="Kubas" type="MeshInstance3D" parent="ModelisHolderis"]
+mesh = CapsuleMesh.new()
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+
+[node name="KardoModelis" type="MeshInstance3D" parent="ModelisHolderis"]
+mesh = BoxMesh.new()
+transform = Transform3D(0.1, 0, 0, 0, 0.8, 0, 0, 0, 0.05, 0.4, 0.9, -0.3)
+
+[node name="AttackArea" type="Area3D" parent="."]
+
+[node name="AttackAreaKolizija" type="CollisionShape3D" parent="AttackArea"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, -1.5)
+shape = SphereShape3D
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+
+[node name="HPBarHolderis" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.2, 0)
+
+[node name="SpotLight3D" type="SpotLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.707, 0.707, 0, -0.707, 0.707, 0, 3, 0)
+light_color = Color(0.9, 0.7, 0.2, 1)
+light_energy = 0.5
+spot_range = 5.0
+spot_angle = 30.0

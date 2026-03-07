@@ -1,0 +1,94 @@
+[gd_scene load_steps=3 format=3 uid="uid://moria_lygis"]
+
+[ext_resource type="Script" path="res://scripts/levels/moria.gd" id="1_moria"]
+[ext_resource type="Script" path="res://scripts/systems/bangu_sistema.gd" id="2_bangos"]
+
+[node name="Moria" type="Node3D"]
+script = ExtResource("1_moria")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = Environment.new()
+
+[node name="Kameras" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.766, 0.643, 0, -0.643, 0.766, 0, 12, 8)
+fov = 60.0
+
+[node name="ZaidejoSpawn" type="Marker3D" parent="."]
+
+[node name="Zeme" type="StaticBody3D" parent="."]
+
+[node name="ZemesModelis" type="MeshInstance3D" parent="Zeme"]
+mesh = PlaneMesh.new()
+transform = Transform3D(30, 0, 0, 0, 1, 0, 0, 0, 30, 0, 0, 0)
+
+[node name="ZemesKolizija" type="CollisionShape3D" parent="Zeme"]
+shape = BoxShape3D
+
+[node name="Sienos" type="StaticBody3D" parent="."]
+
+[node name="SienojeN" type="MeshInstance3D" parent="Sienos"]
+mesh = BoxMesh.new()
+transform = Transform3D(30, 0, 0, 0, 5, 0, 0, 0, 1, 0, 2.5, -15)
+
+[node name="SienojeS" type="MeshInstance3D" parent="Sienos"]
+mesh = BoxMesh.new()
+transform = Transform3D(30, 0, 0, 0, 5, 0, 0, 0, 1, 0, 2.5, 15)
+
+[node name="SienojeV" type="MeshInstance3D" parent="Sienos"]
+mesh = BoxMesh.new()
+transform = Transform3D(1, 0, 0, 0, 5, 0, 0, 0, 30, -15, 2.5, 0)
+
+[node name="SienojeR" type="MeshInstance3D" parent="Sienos"]
+mesh = BoxMesh.new()
+transform = Transform3D(1, 0, 0, 0, 5, 0, 0, 0, 30, 15, 2.5, 0)
+
+[node name="Stulpai" type="Node3D" parent="."]
+
+[node name="Stulpas1" type="MeshInstance3D" parent="Stulpai"]
+mesh = CylinderMesh.new()
+transform = Transform3D(0.5, 0, 0, 0, 3, 0, 0, 0, 0.5, -6, 1.5, -6)
+
+[node name="Stulpas2" type="MeshInstance3D" parent="Stulpai"]
+mesh = CylinderMesh.new()
+transform = Transform3D(0.5, 0, 0, 0, 3, 0, 0, 0, 0.5, 6, 1.5, -6)
+
+[node name="Stulpas3" type="MeshInstance3D" parent="Stulpai"]
+mesh = CylinderMesh.new()
+transform = Transform3D(0.5, 0, 0, 0, 3, 0, 0, 0, 0.5, -6, 1.5, 6)
+
+[node name="Stulpas4" type="MeshInstance3D" parent="Stulpai"]
+mesh = CylinderMesh.new()
+transform = Transform3D(0.5, 0, 0, 0, 3, 0, 0, 0, 0.5, 6, 1.5, 6)
+
+[node name="Apsvietimas" type="Node3D" parent="."]
+
+[node name="SviestuvaiKairys" type="OmniLight3D" parent="Apsvietimas"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 2, 0)
+light_color = Color(0.8, 0.4, 0.1, 1)
+light_energy = 2.0
+omni_range = 8.0
+
+[node name="SviestuvaiDesine" type="OmniLight3D" parent="Apsvietimas"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 2, 0)
+light_color = Color(0.8, 0.4, 0.1, 1)
+light_energy = 2.0
+omni_range = 8.0
+
+[node name="IskylimoTaskai" type="Node3D" parent="."]
+
+[node name="Spawn1" type="Marker3D" parent="IskylimoTaskai"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13, 0, -13)
+
+[node name="Spawn2" type="Marker3D" parent="IskylimoTaskai"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13, 0, -13)
+
+[node name="Spawn3" type="Marker3D" parent="IskylimoTaskai"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -14)
+
+[node name="BanguSistema" type="Node" parent="."]
+script = ExtResource("2_bangos")
+iskylimo_taskai = [NodePath("../IskylimoTaskai/Spawn1"), NodePath("../IskylimoTaskai/Spawn2"), NodePath("../IskylimoTaskai/Spawn3")]
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]

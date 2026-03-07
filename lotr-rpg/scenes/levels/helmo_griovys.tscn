@@ -1,0 +1,85 @@
+[gd_scene load_steps=3 format=3 uid="uid://helmo_griovys_lygis"]
+
+[ext_resource type="Script" path="res://scripts/levels/helmo_griovys.gd" id="1_helmo"]
+[ext_resource type="Script" path="res://scripts/systems/bangu_sistema.gd" id="2_bangos"]
+
+[node name="HelmoGriovys" type="Node3D"]
+script = ExtResource("1_helmo")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = Environment.new()
+
+[node name="Kameras" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.766, 0.643, 0, -0.643, 0.766, 0, 14, 10)
+fov = 65.0
+
+[node name="ZaidejoSpawn" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
+
+[node name="Zeme" type="StaticBody3D" parent="."]
+
+[node name="ZemesModelis" type="MeshInstance3D" parent="Zeme"]
+mesh = PlaneMesh.new()
+transform = Transform3D(40, 0, 0, 0, 1, 0, 0, 0, 40, 0, 0, 0)
+
+[node name="ZemesKolizija" type="CollisionShape3D" parent="Zeme"]
+shape = BoxShape3D
+
+[node name="TvirtovesSimuliacija" type="Node3D" parent="."]
+
+[node name="PagrindineSiena" type="StaticBody3D" parent="TvirtovesSimuliacija"]
+
+[node name="SienosMesh" type="MeshInstance3D" parent="TvirtovesSimuliacija/PagrindineSiena"]
+mesh = BoxMesh.new()
+transform = Transform3D(40, 0, 0, 0, 6, 0, 0, 0, 1.5, 0, 3, -18)
+
+[node name="KairysEconas" type="MeshInstance3D" parent="TvirtovesSimuliacija"]
+mesh = BoxMesh.new()
+transform = Transform3D(1.5, 0, 0, 0, 6, 0, 0, 0, 18, -19, 3, -9)
+
+[node name="DesinesEconas" type="MeshInstance3D" parent="TvirtovesSimuliacija"]
+mesh = BoxMesh.new()
+transform = Transform3D(1.5, 0, 0, 0, 6, 0, 0, 0, 18, 19, 3, -9)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, -0.354, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 0, 10, 0)
+light_color = Color(0.4, 0.4, 0.6, 1)
+light_energy = 0.8
+shadow_enabled = true
+
+[node name="OmniLight1" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 3, 0)
+light_color = Color(0.8, 0.5, 0.2, 1)
+light_energy = 2.5
+omni_range = 10.0
+
+[node name="OmniLight2" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 3, 0)
+light_color = Color(0.8, 0.5, 0.2, 1)
+light_energy = 2.5
+omni_range = 10.0
+
+[node name="IskylimoTaskai" type="Node3D" parent="."]
+
+[node name="Spawn1" type="Marker3D" parent="IskylimoTaskai"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0, -15)
+
+[node name="Spawn2" type="Marker3D" parent="IskylimoTaskai"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, -15)
+
+[node name="Spawn3" type="Marker3D" parent="IskylimoTaskai"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0, -5)
+
+[node name="Spawn4" type="Marker3D" parent="IskylimoTaskai"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, -5)
+
+[node name="Spawn5" type="Marker3D" parent="IskylimoTaskai"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -18)
+
+[node name="BanguSistema" type="Node" parent="."]
+script = ExtResource("2_bangos")
+iskylimo_taskai = [NodePath("../IskylimoTaskai/Spawn1"), NodePath("../IskylimoTaskai/Spawn2"), NodePath("../IskylimoTaskai/Spawn3"), NodePath("../IskylimoTaskai/Spawn4"), NodePath("../IskylimoTaskai/Spawn5")]
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]

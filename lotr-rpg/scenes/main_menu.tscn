@@ -1,0 +1,91 @@
+[gd_scene load_steps=2 format=3 uid="uid://pagrindinis_meniu"]
+
+[ext_resource type="Script" path="res://scripts/ui/pagrindinis_meniu.gd" id="1_meniu"]
+
+[node name="PagrindinisMenuis" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_meniu")
+
+[node name="Fonas" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.02, 0.02, 0.08, 1)
+
+[node name="VirsusPanelis" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+anchor_top = 0.1
+anchor_bottom = 0.45
+offset_left = -300.0
+offset_right = 300.0
+alignment = 1
+
+[node name="ZaidimoVardas" type="Label" parent="VirsusPanelis"]
+layout_mode = 2
+text = "ŽIEDŲ VALDOVAI"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 52
+theme_override_colors/font_color = Color(0.9, 0.7, 0.1, 1)
+
+[node name="Paantraste" type="Label" parent="VirsusPanelis"]
+layout_mode = 2
+text = "Viduržemio Kova"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(0.7, 0.5, 0.1, 1)
+
+[node name="Tarpas" type="Control" parent="VirsusPanelis"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 40)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+anchor_top = 0.5
+anchor_bottom = 0.85
+offset_left = -200.0
+offset_right = 200.0
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="ZaistiMygtuk" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 70)
+text = "ŽAISTI"
+theme_override_font_sizes/font_size = 28
+
+[node name="NustatymaiMygtuk" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 60)
+text = "NUSTATYMAI"
+theme_override_font_sizes/font_size = 22
+
+[node name="IseitiMygtuk" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 60)
+text = "IŠEITI"
+theme_override_font_sizes/font_size = 22
+
+[node name="RekordasLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = -50.0
+offset_right = 400.0
+offset_bottom = -10.0
+text = "Rekordas: 0"
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]

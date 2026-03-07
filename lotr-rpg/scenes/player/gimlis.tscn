@@ -1,0 +1,33 @@
+[gd_scene load_steps=2 format=3 uid="uid://gimlis_scena"]
+
+[ext_resource type="Script" path="res://scripts/player/gimlis.gd" id="1_gimlis"]
+
+[node name="Gimlis" type="CharacterBody3D"]
+script = ExtResource("1_gimlis")
+
+[node name="KolizijosForma" type="CollisionShape3D" parent="."]
+shape = CapsuleShape3D
+
+[node name="ModelisHolderis" type="Node3D" parent="."]
+
+[node name="KunasModelis" type="MeshInstance3D" parent="ModelisHolderis"]
+mesh = CapsuleMesh.new()
+transform = Transform3D(1.2, 0, 0, 0, 0.8, 0, 0, 0, 1.2, 0, 0.7, 0)
+
+[node name="KirvisModelis" type="MeshInstance3D" parent="ModelisHolderis"]
+mesh = BoxMesh.new()
+transform = Transform3D(0.3, 0, 0, 0, 0.4, 0, 0, 0, 0.1, 0.5, 0.8, -0.3)
+
+[node name="AttackArea" type="Area3D" parent="."]
+
+[node name="AttackAreaKolizija" type="CollisionShape3D" parent="AttackArea"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, -1.2)
+shape = SphereShape3D
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+
+[node name="SpotLight3D" type="SpotLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.0, 0)
+light_color = Color(0.8, 0.5, 0.1, 1)
+light_energy = 0.7
+omni_range = 3.5

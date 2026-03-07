@@ -1,0 +1,38 @@
+[gd_scene load_steps=2 format=3 uid="uid://gandalfas_scena"]
+
+[ext_resource type="Script" path="res://scripts/player/gandalfas.gd" id="1_gandalfas"]
+
+[node name="Gandalfas" type="CharacterBody3D"]
+script = ExtResource("1_gandalfas")
+
+[node name="KolizijosForma" type="CollisionShape3D" parent="."]
+shape = CapsuleShape3D
+
+[node name="ModelisHolderis" type="Node3D" parent="."]
+
+[node name="Kubas" type="MeshInstance3D" parent="ModelisHolderis"]
+mesh = CapsuleMesh.new()
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+
+[node name="LazdelioModelis" type="MeshInstance3D" parent="ModelisHolderis"]
+mesh = CylinderMesh.new()
+transform = Transform3D(0.05, 0, 0, 0, 1.2, 0, 0, 0, 0.05, 0.3, 0.9, -0.2)
+
+[node name="AttackArea" type="Area3D" parent="."]
+
+[node name="AttackAreaKolizija" type="CollisionShape3D" parent="AttackArea"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, -5.0)
+shape = SphereShape3D
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+
+[node name="MagijosEfektas" type="GPUParticles3D" parent="."]
+emitting = false
+amount = 50
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 1.0, -0.2)
+
+[node name="SpotLight3D" type="SpotLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+light_color = Color(0.9, 0.9, 1.0, 1)
+light_energy = 1.2
+omni_range = 4.0

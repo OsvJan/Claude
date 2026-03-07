@@ -1,0 +1,63 @@
+[gd_scene load_steps=2 format=3 uid="uid://zaidejas_mirtas_scena"]
+
+[ext_resource type="Script" path="res://scripts/ui/zaidejas_mirtas.gd" id="1_zm"]
+
+[node name="ZaidejasMirtas" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_zm")
+
+[node name="Fonas" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.0, 0.0, 0.0, 0.9)
+
+[node name="KontainerisKentras" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_right = 0.5
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = -250.0
+offset_right = 250.0
+offset_top = -200.0
+offset_bottom = 200.0
+theme_override_constants/separation = 25
+alignment = 1
+
+[node name="MirtiesLabel" type="Label" parent="KontainerisKentras"]
+layout_mode = 2
+text = "ŽAIDĖJAS KRITO..."
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 40
+theme_override_colors/font_color = Color(0.8, 0.1, 0.1, 1)
+
+[node name="TaskaiLabel" type="Label" parent="KontainerisKentras"]
+layout_mode = 2
+text = "Taškai: 0"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 28
+
+[node name="RekordasLabel" type="Label" parent="KontainerisKentras"]
+layout_mode = 2
+text = "Rekordas: 0"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(0.9, 0.7, 0.1, 1)
+
+[node name="BandytiVelMygtuk" type="Button" parent="KontainerisKentras"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 65)
+text = "BANDYTI VĖL"
+theme_override_font_sizes/font_size = 26
+
+[node name="PagrindinisMygtuk" type="Button" parent="KontainerisKentras"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 55)
+text = "PAGRINDINIS MENIU"
+theme_override_font_sizes/font_size = 22

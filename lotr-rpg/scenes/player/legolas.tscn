@@ -1,0 +1,33 @@
+[gd_scene load_steps=2 format=3 uid="uid://legolas_scena"]
+
+[ext_resource type="Script" path="res://scripts/player/legolas.gd" id="1_legolas"]
+
+[node name="Legolas" type="CharacterBody3D"]
+script = ExtResource("1_legolas")
+
+[node name="KolizijosForma" type="CollisionShape3D" parent="."]
+shape = CapsuleShape3D
+
+[node name="ModelisHolderis" type="Node3D" parent="."]
+
+[node name="KunasModelis" type="MeshInstance3D" parent="ModelisHolderis"]
+mesh = CapsuleMesh.new()
+transform = Transform3D(0.9, 0, 0, 0, 1, 0, 0, 0, 0.9, 0, 0.9, 0)
+
+[node name="LankasModelis" type="MeshInstance3D" parent="ModelisHolderis"]
+mesh = TorusMesh.new()
+transform = Transform3D(0.05, 0, 0.5, 0, 0.4, 0, -0.5, 0, 0.05, 0.4, 0.9, 0)
+
+[node name="AttackArea" type="Area3D" parent="."]
+
+[node name="AttackAreaKolizija" type="CollisionShape3D" parent="AttackArea"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, -9.0)
+shape = SphereShape3D
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+
+[node name="SpotLight3D" type="SpotLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.2, 0)
+light_color = Color(0.2, 0.9, 0.4, 1)
+light_energy = 0.6
+omni_range = 3.0

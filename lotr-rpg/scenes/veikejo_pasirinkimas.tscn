@@ -1,0 +1,126 @@
+[gd_scene load_steps=2 format=3 uid="uid://veikejo_pasirinkimas"]
+
+[ext_resource type="Script" path="res://scripts/ui/veikejo_pasirinkimas.gd" id="1_vp"]
+
+[node name="VeikejoPasirinkimas" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_vp")
+
+[node name="Fonas" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.02, 0.02, 0.08, 1)
+
+[node name="Antraste" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+anchor_top = 0.02
+offset_left = -300.0
+offset_right = 300.0
+offset_bottom = 70.0
+text = "PASIRINKITE VEIKĖJĄ"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 36
+theme_override_colors/font_color = Color(0.9, 0.7, 0.1, 1)
+
+[node name="VeikejuSarasas" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchor_left = 0.0
+anchor_right = 1.0
+anchor_top = 0.1
+anchor_bottom = 0.25
+theme_override_constants/separation = 10
+
+[node name="AragornMygtuk" type="Button" parent="VeikejuSarasas"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "⚔\nARAGORN"
+theme_override_font_sizes/font_size = 18
+
+[node name="GandalfasMygtuk" type="Button" parent="VeikejuSarasas"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "🔮\nGANDALFAS"
+theme_override_font_sizes/font_size = 18
+
+[node name="LegolasMygtuk" type="Button" parent="VeikejuSarasas"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "🏹\nLEGOLAS"
+theme_override_font_sizes/font_size = 18
+
+[node name="GimlisMygtuk" type="Button" parent="VeikejuSarasas"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "🪓\nGIMLIS"
+theme_override_font_sizes/font_size = 18
+
+[node name="InfoPanelis" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchor_left = 0.0
+anchor_right = 1.0
+anchor_top = 0.27
+anchor_bottom = 0.88
+theme_override_constants/separation = 12
+
+[node name="VardasLabel" type="Label" parent="InfoPanelis"]
+layout_mode = 2
+text = "Aragorn"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 32
+theme_override_colors/font_color = Color(0.9, 0.7, 0.1, 1)
+
+[node name="AprasasLabel" type="Label" parent="InfoPanelis"]
+layout_mode = 2
+text = "Aprašas bus čia"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
+autowrap_mode = 3
+
+[node name="StatistikuAntraste" type="Label" parent="InfoPanelis"]
+layout_mode = 2
+text = "── STATISTIKOS ──"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.5, 0.5, 0.5, 1)
+
+[node name="StatistikuGrid" type="GridContainer" parent="InfoPanelis"]
+layout_mode = 2
+columns = 4
+
+[node name="GebejimuAntraste" type="Label" parent="InfoPanelis"]
+layout_mode = 2
+text = "── GEBĖJIMAI ──"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.5, 0.5, 0.5, 1)
+
+[node name="GebejimuList" type="VBoxContainer" parent="InfoPanelis"]
+layout_mode = 2
+
+[node name="ApaciaMygtukai" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchor_left = 0.0
+anchor_right = 1.0
+anchor_top = 0.88
+anchor_bottom = 1.0
+
+[node name="AtgalMygtuk" type="Button" parent="ApaciaMygtukai"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "← ATGAL"
+theme_override_font_sizes/font_size = 22
+
+[node name="PasirinktiMygtuk" type="Button" parent="ApaciaMygtukai"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "ŽAISTI →"
+theme_override_font_sizes/font_size = 22
